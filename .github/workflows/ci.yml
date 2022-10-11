@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - action
+    tags:
+    - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: "${{ github.workspace }}/create_nvidia_driver_image"
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: '*.nv.drv'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

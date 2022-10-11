@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# usage: ./create_nvidia_driver_image 510.68.02
+
+try_dl() {
+     if which aria2c &>/dev/null
+          then
+               aria2c -x 13 -s 13 --allow-overwrite -o "nvidia.run" -d "$nvidia_drivers_dir" "$driver_url"
+     elif which wget &>/dev/null
+          then
+               wget --no-check-certificate --content-disposition -t 3 -T 5 -w 0.5 \
+                    "$driver_url" -O "$nvidia_drivers_dir/nvidia.run"
+     elif which curl &>/dev/null
+          then
+               curl -L "$driver_url" -o "$nvidia_drivers_dir/nvidia.run"
+     else
+          return 1
+     fi
+}
+
+[[ ! -n "$1" && -n "$(git tag --list|tac|head -1|sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')" ]] && \
+     nvidia_version="$(git tag --list|tac|head -1|sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')"
+
+if [[ -n "$1" || -n "$nvidia_version" ]]
+     then
+          [ ! -n "$nvidia_version" ] && \
+               nvidia_version="$1"
+          [[ -d "$2" && ! -n "$nvidia_drivers_dir" ]] && \
+               nvidia_drivers_dir="$2"
+          [[ ! -d "$2" && ! -n "$nvidia_drivers_dir" ]] && \
+               nvidia_drivers_dir="."
+          [ ! -n "$nvidia_driver_sfs" ] && \
+               nvidia_driver_sfs="$nvidia_version.nv.drv"
+          mkdir -p "$nvidia_drivers_dir" 2>/dev/null
+          echo "Downloading Nvidia ${nvidia_version}, please wait..."
+          driver_url="https://us.download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/NVIDIA-Linux-x86_64-${nvidia_version}.run"
+          if try_dl
+               then
+                    trash_libs="libEGL.so.1.1.0 libGLdispatch.so.0 \
+                         libGLESv1_CM.so.1.2.0 libGLESv2.so.2.1.0 libGL.so.1.7.0 \
+                         libGLX.so.0 libOpenCL.so.1.0.0 libOpenGL.so.0 \
+                         libnvidia-opencl* libnvidia-compiler*"
+                    chmod u+x "$nvidia_drivers_dir/nvidia.run"
+                    echo "Unpacking nvidia.run..."
+                    (cd "$nvidia_drivers_dir" && \
+                         ./nvidia.run -x &>/dev/null
+                         rm -f nvidia.run
+                         mv -f NVIDIA-Linux-x86_64-${nvidia_version} $nvidia_version)
+                    echo "Creating a driver directory structure..."
+                    (cd "$nvidia_drivers_dir/$nvidia_version" && \
+                         rm -rf html kernel* libglvnd_install_checker 32/libglvnd_install_checker \
+                              supported-gpus systemd *.gz *.bz2 *.txt *Changelog LICENSE \
+                              .manifest *.desktop *.png 2>/dev/null
+                         mkdir profiles && mv *application-profiles* profiles
+                         mkdir wine && mv *nvngx.dll wine
+                         mkdir json && mv *.json json
+                         mkdir conf && mv *.conf *.icd conf
+                         for lib in $trash_libs ; do rm $lib 32/$lib 2>/dev/null ; done
+                         mkdir bin && mv *.sh mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
+                              nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater \
+                              nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig bin
+                         mkdir 64 && mv *.so* 64)
+                    echo "Creating a squashfs driver image..."
+                    echo "$nvidia_drivers_dir/$nvidia_driver_sfs"
+                    if mksquashfs "$nvidia_drivers_dir/$nvidia_version" "$nvidia_drivers_dir/$nvidia_driver_sfs" \
+                         -root-owned -no-xattrs -noappend -b 256K -comp lz4 -Xhc -quiet
+                         then
+                              echo "Deleting the source directory of the driver..."
+                              rm -rf "$nvidia_drivers_dir/$nvidia_version"
+                    fi
+               else
+                    echo "Failed to download Nvidia driver!"
+                    exit 1
+          fi
+     else
+          echo "You must specify the Nvidia driver version!"
+          exit 1
+fi
