@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# usage: ./create_nvidia_driver_image 510.68.02
+# usage: ./create_nvidia_driver_image 520.56.06
 
 try_dl() {
      if which aria2c &>/dev/null
@@ -39,7 +39,7 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                     trash_libs="libEGL.so.1.1.0 libGLdispatch.so.0 \
                          libGLESv1_CM.so.1.2.0 libGLESv2.so.2.1.0 libGL.so.1.7.0 \
                          libGLX.so.0 libOpenCL.so.1.0.0 libOpenGL.so.0 \
-                         libnvidia-opencl* libnvidia-compiler*"
+                         libnvidia-opencl* libnvidia-compiler* libcudadebugger*"
                     chmod u+x "$nvidia_drivers_dir/nvidia.run"
                     echo "Unpacking nvidia.run..."
                     (cd "$nvidia_drivers_dir" && \
