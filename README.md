@@ -8,5 +8,5 @@ git clone https://github.com/VHSgunzo/runimage-nvidia-drivers.git
 * **Build Nvidia driver images**
 ```
 cd runimage-nvidia-drivers
-./create_nvidia_driver_image 510.68.02
+./create_nvidia_driver_image 520.56.06
 ```
