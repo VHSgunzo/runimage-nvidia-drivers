@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# usage: ./create_nvidia_driver_image 520.56.06
+# usage: ./create_nvidia_driver_image 525.60.11
 
 try_dl() {
      if which aria2c &>/dev/null
@@ -50,7 +50,7 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                     (cd "$nvidia_drivers_dir/$nvidia_version" && \
                          rm -rf html kernel* libglvnd_install_checker 32/libglvnd_install_checker \
                               supported-gpus systemd *.gz *.bz2 *.txt *Changelog LICENSE \
-                              .manifest *.desktop *.png 2>/dev/null
+                              .manifest *.desktop *.png firmware 2>/dev/null
                          mkdir profiles && mv *application-profiles* profiles
                          mkdir wine && mv *nvngx.dll wine
                          mkdir json && mv *.json json
@@ -63,7 +63,7 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                     echo "Creating a squashfs driver image..."
                     echo "$nvidia_drivers_dir/$nvidia_driver_sfs"
                     if mksquashfs "$nvidia_drivers_dir/$nvidia_version" "$nvidia_drivers_dir/$nvidia_driver_sfs" \
-                         -root-owned -no-xattrs -noappend -b 256K -comp lz4 -Xhc -quiet
+                         -root-owned -no-xattrs -noappend -b 1M -comp zstd -Xcompression-level 19 -quiet
                          then
                               echo "Deleting the source directory of the driver..."
                               rm -rf "$nvidia_drivers_dir/$nvidia_version"
