@@ -1,18 +1,19 @@
 #!/bin/bash
+#set -e
 
-# usage: ./create_nvidia_driver_image 525.60.11
+# usage: ./create_nvidia_driver_image 530.41.03
 
 try_dl() {
      if which aria2c &>/dev/null
           then
-               aria2c -x 13 -s 13 --allow-overwrite -o "nvidia.run" -d "$nvidia_drivers_dir" "$driver_url"
+               aria2c -x 13 -s 13 --allow-overwrite -o "$nvidia_run" -d "$nvidia_drivers_dir" "$driver_url"
      elif which wget &>/dev/null
           then
                wget --no-check-certificate --content-disposition -t 3 -T 5 -w 0.5 \
-                    "$driver_url" -O "$nvidia_drivers_dir/nvidia.run"
+                    "$driver_url" -O "$nvidia_drivers_dir/$nvidia_run"
      elif which curl &>/dev/null
           then
-               curl -L "$driver_url" -o "$nvidia_drivers_dir/nvidia.run"
+               curl -L "$driver_url" -o "$nvidia_drivers_dir/$nvidia_run"
      else
           return 1
      fi
@@ -31,35 +32,39 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                nvidia_drivers_dir="."
           [ ! -n "$nvidia_driver_sfs" ] && \
                nvidia_driver_sfs="$nvidia_version.nv.drv"
-          mkdir -p "$nvidia_drivers_dir" 2>/dev/null
+          mkdir -p "$nvidia_drivers_dir"
           echo "Downloading Nvidia ${nvidia_version}, please wait..."
-          driver_url="https://us.download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/NVIDIA-Linux-x86_64-${nvidia_version}.run"
-          if try_dl
+          nvidia_run="NVIDIA-Linux-x86_64-${nvidia_version}.run"
+          driver_url="https://us.download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/$nvidia_run"
+          if [ -f "$nvidia_run" ] || try_dl
                then
+                    binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
+                         nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater tls_test \
+                         nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig"
                     trash_libs="libEGL.so.1.1.0 libGLdispatch.so.0 \
                          libGLESv1_CM.so.1.2.0 libGLESv2.so.2.1.0 libGL.so.1.7.0 \
                          libGLX.so.0 libOpenCL.so.1.0.0 libOpenGL.so.0 \
-                         libnvidia-opencl* libnvidia-compiler* libcudadebugger*"
-                    chmod u+x "$nvidia_drivers_dir/nvidia.run"
-                    echo "Unpacking nvidia.run..."
-                    (cd "$nvidia_drivers_dir" && \
-                         ./nvidia.run -x &>/dev/null
-                         rm -f nvidia.run
-                         mv -f NVIDIA-Linux-x86_64-${nvidia_version} $nvidia_version)
+                         libnvidia-opencl* libnvidia-compiler* libcudadebugger* *.la"
+                    chmod u+x "$nvidia_drivers_dir/$nvidia_run"
+                    echo "Unpacking $nvidia_run..."
+                    (cd "$nvidia_drivers_dir" && rm -rf "$nvidia_version" && \
+                         "./$nvidia_run" --target "$nvidia_version" -x &>/dev/null)
                     echo "Creating a driver directory structure..."
                     (cd "$nvidia_drivers_dir/$nvidia_version" && \
                          rm -rf html kernel* libglvnd_install_checker 32/libglvnd_install_checker \
-                              supported-gpus systemd *.gz *.bz2 *.txt *Changelog LICENSE \
-                              .manifest *.desktop *.png firmware 2>/dev/null
+                              supported-gpus systemd *.gz *.bz2 *.txt .manifest *.desktop *.png firmware *.h
+                         for temp in $(ls *.template 2>/dev/null) ; do mv "$temp" "${temp%.template}" ; done
                          mkdir profiles && mv *application-profiles* profiles
-                         mkdir wine && mv *nvngx.dll wine
+                         [ -f "nvoptix.bin" ] && mv nvoptix.bin profiles
+                         [ -n "$(ls *nvngx.dll 2>/dev/null)" ] && mkdir wine && mv *nvngx.dll wine
                          mkdir json && mv *.json json
                          mkdir conf && mv *.conf *.icd conf
-                         for lib in $trash_libs ; do rm $lib 32/$lib 2>/dev/null ; done
-                         mkdir bin && mv *.sh mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
-                              nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater \
-                              nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig bin
-                         mkdir 64 && mv *.so* 64)
+                         for lib in $trash_libs ; do rm -f $lib 32/$lib ; done
+                         mkdir bin && mv *.sh bin
+                         for binary in $binary_files ; do [ -f "$binary" ] && mv $binary bin ; done
+                         mkdir 64 && mv *.so* 64
+                         [ -d "tls" ] && mv tls/* 64 && rm -rf tls
+                         [ -d "32/tls" ] && mv 32/tls/* 32 && rm -rf 32/tls)
                     echo "Creating a squashfs driver image..."
                     echo "$nvidia_drivers_dir/$nvidia_driver_sfs"
                     if mksquashfs "$nvidia_drivers_dir/$nvidia_version" "$nvidia_drivers_dir/$nvidia_driver_sfs" \

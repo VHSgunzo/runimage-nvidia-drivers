@@ -8,14 +8,18 @@ on:
     - '*'
 
 jobs:
-  build:
+  build_and_release:
+    name: runimage-nvidia-driver
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Build
         run: "${{ github.workspace }}/create_nvidia_driver_image"
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
