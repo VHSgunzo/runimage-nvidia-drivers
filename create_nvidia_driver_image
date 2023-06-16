@@ -41,10 +41,10 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                     binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
                          nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater tls_test \
                          nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig"
-                    trash_libs="libEGL.so.1.1.0 libGLdispatch.so.0 \
-                         libGLESv1_CM.so.1.2.0 libGLESv2.so.2.1.0 libGL.so.1.7.0 \
-                         libGLX.so.0 libOpenCL.so.1.0.0 libOpenGL.so.0 \
-                         libnvidia-opencl* libnvidia-compiler* libcudadebugger* *.la"
+                    trash_libs="libEGL.so* libGLdispatch.so* \
+                         libGLESv1_CM.so* libGLESv2.so* libGL.so* \
+                         libGLX.so* libOpenCL.so* libOpenGL.so* \
+                         libnvidia-opencl* libnvidia-compiler* *.la"
                     chmod u+x "$nvidia_drivers_dir/$nvidia_run"
                     echo "Unpacking $nvidia_run..."
                     (cd "$nvidia_drivers_dir" && rm -rf "$nvidia_version" && \
