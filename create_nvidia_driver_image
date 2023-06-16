@@ -41,7 +41,7 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                     binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
                          nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater tls_test \
                          nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig"
-                    trash_libs="libEGL.so* libGLdispatch.so* \
+                    trash_libs="libEGL.so* libGLdispatch.so* *.swidtag \
                          libGLESv1_CM.so* libGLESv2.so* libGL.so* \
                          libGLX.so* libOpenCL.so* libOpenGL.so* \
                          libnvidia-opencl* libnvidia-compiler* *.la"
