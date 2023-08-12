@@ -1,7 +1,7 @@
 #!/bin/bash
 #set -e
 
-# usage: ./create_nvidia_driver_image 530.41.03
+# usage: ./create_nvidia_driver_image 535.98
 
 try_dl() {
      if which aria2c &>/dev/null
