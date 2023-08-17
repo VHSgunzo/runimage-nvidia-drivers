@@ -4,19 +4,23 @@
 # usage: ./create_nvidia_driver_image 535.98
 
 try_dl() {
-     if which aria2c &>/dev/null
-          then
-               aria2c -x 13 -s 13 --allow-overwrite -o "$nvidia_run" -d "$nvidia_drivers_dir" "$driver_url"
-     elif which wget &>/dev/null
-          then
-               wget --no-check-certificate --content-disposition -t 3 -T 5 -w 0.5 \
-                    "$driver_url" -O "$nvidia_drivers_dir/$nvidia_run"
-     elif which curl &>/dev/null
-          then
-               curl -L "$driver_url" -o "$nvidia_drivers_dir/$nvidia_run"
-     else
-          return 1
-     fi
+     for driver_url in ${driver_url_list[@]}
+          do
+               if which aria2c &>/dev/null
+                    then
+                         aria2c -x 13 -s 13 --allow-overwrite -o "$nvidia_run" \
+                              -d "$nvidia_drivers_dir" "$driver_url" && return 0
+               elif which wget &>/dev/null
+                    then
+                         wget --no-check-certificate --content-disposition -t 3 -T 5 -w 0.5 \
+                              "$driver_url" -O "$nvidia_drivers_dir/$nvidia_run" && return 0
+               elif which curl &>/dev/null
+                    then
+                         curl -L "$driver_url" -o "$nvidia_drivers_dir/$nvidia_run" && return 0
+               else
+                    return 1
+               fi
+     done
 }
 
 [[ ! -n "$1" && -n "$(git tag --list|tac|head -1|sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')" ]] && \
@@ -35,7 +39,10 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
           mkdir -p "$nvidia_drivers_dir"
           echo "Downloading Nvidia ${nvidia_version}, please wait..."
           nvidia_run="NVIDIA-Linux-x86_64-${nvidia_version}.run"
-          driver_url="https://us.download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/$nvidia_run"
+          driver_url_list=(
+               "https://us.download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/$nvidia_run"
+               "https://us.download.nvidia.com/tesla/${nvidia_version}/$nvidia_run"
+          )
           if [ -f "$nvidia_run" ] || try_dl
                then
                     binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
