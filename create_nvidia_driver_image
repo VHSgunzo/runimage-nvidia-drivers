@@ -1,7 +1,8 @@
 #!/bin/bash
 #set -e
+shopt -s extglob
 
-# usage: ./create_nvidia_driver_image 535.98
+# usage: ./create_nvidia_driver_image 535.104.05
 
 try_dl() {
      for driver_url in ${driver_url_list[@]}
@@ -48,10 +49,9 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                     binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
                          nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater tls_test \
                          nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig"
-                    trash_libs="libEGL.so* libGLdispatch.so* *.swidtag \
-                         libGLESv1_CM.so* libGLESv2.so* libGL.so* \
-                         libGLX.so* libOpenCL.so* libOpenGL.so* \
-                         libnvidia-opencl* libnvidia-compiler* *.la"
+                    trash_libs="libEGL.so* libGLdispatch.so* *.swidtag libnvidia-egl-wayland.so* \
+                         libGLESv!(*nvidia).so* libGL.so* libGLX.so* libOpenCL.so* libOpenGL.so* \
+                         libnvidia-compiler* *.la"
                     chmod u+x "$nvidia_drivers_dir/$nvidia_run"
                     echo "Unpacking $nvidia_run..."
                     (cd "$nvidia_drivers_dir" && rm -rf "$nvidia_version" && \
