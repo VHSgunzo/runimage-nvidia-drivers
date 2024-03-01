@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+
+cp_lib() {
+    sys_lpth="$(realpath "$lib")"
+    sys_lname="$(basename "$sys_lpth")"
+    if [[ "${ORIG_LNAMES[@]}" =~ "$sys_lname" ]]
+        then lname="$sys_lname"
+        else lname="$(basename "$(grep -o '/.*\.so' <<<"$lib")").$nvidia_version"
+    fi
+    [[ ! -e "$lname" && -e "$sys_lpth" ]] && \
+        cp -f "$sys_lpth" "$lname"
+}
+
+find_cfg() { find /etc/ /usr/share -name "*$1" -type f 2>/dev/null|head -1 ; }
+
+nvidia_version=$(cat /sys/module/nvidia/version)
+
+ORIG_LNAMES=(
+    'nvidia_drv.so' 'libnvidia-egl-gbm.so.1.1.0'
+    'libnvidia-nvvm.so.4.0.0' 'libnvidia-api.so.1'
+)
+TRASH_LIBS=('libnvidia-container*' 'libnvidia-compiler*')
+BINS=(
+    'mkprecompiled' 'nvidia-cuda-mps-control' 'nvidia-cuda-mps-server'
+    'nvidia-debugdump' 'nvidia-installer' 'nvidia-modprobe'
+    'nvidia-ngx-updater' 'tls_test' 'nvidia-persistenced' 'nvidia-powerd'
+    'nvidia-settings' 'nvidia-smi' 'nvidia-xconfig'
+)
+                                # 10-nvidia.conf  # /usr/share/X11/xorg.conf.d
+CONFS=('nvidia-dbus.conf' 'nvidia-drm-outputclass.conf' 'nvidia.icd')
+JSONS=(
+    '10_nvidia.json' '10_nvidia_wayland.json' '15_nvidia_gbm.json'
+    'nvidia_icd.json' 'nvidia_layers.json'
+)
+PROFS=(
+    "nvidia-application-profiles-${nvidia_version}-key-documentation"
+    "nvidia-application-profiles-${nvidia_version}-rc"
+    'nvoptix.bin'
+)
+WINEL=('_nvngx.dll'  'nvngx.dll')
+LICENSES=(
+    '/usr/share/licenses/nvidia-utils/LICENSE'
+    '/usr/share/doc/nvidia-driver-*/LICENSE'
+)
+
+NVLIB="$(ldconfig -p|grep -E 'nvidia|nvoptix|libcuda|libnvcuvid'|sed 's|.*=> ||g'|sort -u)"
+for lib in "${TRASH_LIBS[@]}"
+    do NVLIB="$(grep -v "$lib"<<<"$NVLIB")"
+done
+
+NVLIB32=($(grep -E '/lib32/|/i386-linux-gnu/'<<<"$NVLIB"))
+for pth in lib32 i386-linux-gnu
+    do
+        nvvdpau="/usr/$pth/vdpau/libvdpau_nvidia.so"
+        [ -e "$nvvdpau" ] && NVLIB32+=("$nvvdpau")
+done
+
+NVLIB64=($(grep -E '/lib/|/x86_64-linux-gnu/'<<<"$NVLIB"))
+for pth in lib x86_64-linux-gnu
+    do
+        libs=(
+            "/usr/$pth/vdpau/libvdpau_nvidia.so"
+            "/usr/$pth/xorg/modules/drivers/nvidia_drv.so"
+            "/usr/$pth/nvidia/xorg/libglxserver_nvidia.so"
+        )
+        for lib in "${libs[@]}"
+            do [ -e "$lib" ] && NVLIB64+=("$lib")
+        done
+done
+
+mkdir -p "$nvidia_version"
+(
+cd "$nvidia_version"
+
+(mkdir -p 32 && cd 32
+for lib in "${NVLIB32[@]}"
+    do cp_lib
+done)
+
+(mkdir -p 64 && cd 64
+for lib in "${NVLIB64[@]}"
+    do cp_lib
+done)
+
+(mkdir -p bin && cd bin
+for bin in "${BINS[@]}"
+    do
+        sys_bpth="$(command -v "$bin")"
+        [[ ! -e "$bin" && -e "$sys_bpth" ]] && \
+            cp -f "$sys_bpth" "$bin"
+done)
+
+(mkdir -p conf && cd conf
+for conf in "${CONFS[@]}"
+    do
+        sys_cpth="$(find_cfg "$conf")"
+        [[ ! -e "$conf" && -e "$sys_cpth" ]] && \
+            cp -f "$sys_cpth" "$conf"
+done)
+
+(mkdir -p json && cd json
+for json in "${JSONS[@]}"
+    do
+        sys_jpth="$(find_cfg "$json")"
+        [[ ! -e "$json" && -e "$sys_jpth" ]] && \
+            cp -f "$sys_jpth" "$json"
+done)
+
+if [[ ! -e 'profiles' && -d '/usr/share/nvidia' ]]
+    then cp -rf '/usr/share/nvidia' 'profiles'
+    else
+        (mkdir -p profiles && cd profiles
+        for prof in "${PROFS[@]}"
+            do
+                sys_ppth="$(find_cfg "$prof")"
+                [[ ! -e "$prof" && -e "$sys_ppth" ]] && \
+                    cp -f "$sys_ppth" "$prof"
+        done)
+fi
+
+if [[ ! -e 'wine' && -d '/usr/lib/nvidia/wine' ]]
+    then cp -rf '/usr/lib/nvidia/wine' 'wine'
+    else
+        (mkdir -p wine && cd wine
+        for wl in "${WINEL[@]}"
+            do
+                sys_wlpth="$(find /usr -type f -name "$wl" 2>/dev/null)"
+                [[ ! -e "$wl" && -e "$sys_wlpth" ]] && \
+                    cp -f "$sys_wlpth" "$wl"
+        done)
+fi
+
+for lic in "${LICENSES[@]}"
+    do
+        sys_licpth="$(ls "$lic" 2>/dev/null)"
+        [[ ! -e 'LICENSE' && -e "$sys_licpth" ]] && \
+            cp -f "$sys_licpth" . && break
+done
+)
+
+mksquashfs "$nvidia_version" "$nvidia_version.nv.drv" \
+    -root-owned -no-xattrs -noappend -b 1M -comp zstd -Xcompression-level 1 -quiet && \
+rm -rf "$nvidia_version"
