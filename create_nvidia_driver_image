@@ -41,7 +41,7 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
           echo "Downloading Nvidia ${nvidia_version}, please wait..."
           nvidia_run="NVIDIA-Linux-x86_64-${nvidia_version}.run"
           driver_url_list=(
-               "https://us.download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/$nvidia_run"
+               "https://download.nvidia.com/XFree86/Linux-x86_64/${nvidia_version}/$nvidia_run"
                "https://us.download.nvidia.com/tesla/${nvidia_version}/$nvidia_run"
                "https://developer.nvidia.com/downloads/vulkan-beta-${nvidia_version//.}-linux"
                "https://developer.nvidia.com/vulkan-beta-${nvidia_version//.}-linux"
@@ -49,12 +49,12 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
           )
           if [ -f "$nvidia_run" ] || try_dl
                then
-                    binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-server \
-                         nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater tls_test \
-                         nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig"
-                    trash_libs="libEGL.so* libGLdispatch.so* *.swidtag libnvidia-egl-wayland.so* \
-                         libGLESv!(*nvidia).so* libGL.so* libGLX.so* libOpenCL.so* libOpenGL.so* \
-                         libnvidia-compiler* *.la"
+                    binary_files="mkprecompiled nvidia-cuda-mps-control nvidia-cuda-mps-srv nvidia-pcc \
+                        nvidia-debugdump nvidia-installer nvidia-modprobe nvidia-ngx-updater tls_test \
+                        nvidia-persistenced nvidia-powerd nvidia-settings nvidia-smi nvidia-xconfig
+                        nvidia-cuda-mps-server nvidia-bug-report.sh nvidia-sleep.sh"
+                    trash_libs="libEGL.so* libGLdispatch.so* *.swidtag *.la \
+                         libGLESv!(*nvidia).so* libGL.so* libGLX.so* libOpenCL.so* libOpenGL.so*"
                     chmod u+x "$nvidia_drivers_dir/$nvidia_run"
                     echo "Unpacking $nvidia_run..."
                     (cd "$nvidia_drivers_dir" && rm -rf "$nvidia_version" && \
@@ -66,7 +66,7 @@ if [[ -n "$1" || -n "$nvidia_version" ]]
                          for temp in $(ls *.template 2>/dev/null) ; do mv "$temp" "${temp%.template}" ; done
                          mkdir profiles && mv *application-profiles* profiles
                          [ -f "nvoptix.bin" ] && mv nvoptix.bin profiles
-                         [ -n "$(ls *nvngx.dll 2>/dev/null)" ] && mkdir wine && mv *nvngx.dll wine
+                         [ -n "$(ls *.dll 2>/dev/null)" ] && mkdir wine && mv *.dll wine
                          mkdir json && mv *.json json
                          mkdir conf && mv *.conf *.icd conf
                          for lib in $trash_libs ; do rm -f $lib 32/$lib ; done
