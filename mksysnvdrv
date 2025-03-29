@@ -48,7 +48,7 @@ PROFS=(
     "nvidia-application-profiles-${nvidia_version}-rc"
     'nvoptix.bin'
 )
-WINEL=('_nvngx.dll'  'nvngx.dll')
+WINEL=('_nvngx.dll'  'nvngx.dll' 'nvngx_dlssg.dll')
 LICENSES=(
     '/usr/share/licenses/nvidia-utils/LICENSE'
     /usr/share/doc/nvidia-driver-*/LICENSE
